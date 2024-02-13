@@ -6,13 +6,13 @@ from uuid import uuid4
 
 unique_id = uuid4().hex[0:8]
 
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = "pt-authorized-prefix-30"
-os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
-os.environ["LANGCHAIN_API_KEY"] = "ls__36c6855495a940e7b0e04101249b4745"  # Update to your API key
+# os.environ["LANGCHAIN_TRACING_V2"] = "true"
+# os.environ["LANGCHAIN_PROJECT"] = "pt-authorized-prefix-30"
+# os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+# os.environ["LANGCHAIN_API_KEY"] = "ls__36c6855495a940e7b0e04101249b4745"  # Update to your API key
 
-# Used by the agent in this tutorial
-os.environ["OPENAI_API_KEY"] = "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"
+# # Used by the agent in this tutorial
+# os.environ["OPENAI_API_KEY"] = "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"
 
 from langsmith import Client
 
