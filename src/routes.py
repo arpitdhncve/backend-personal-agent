@@ -12,7 +12,7 @@ unique_id = uuid4().hex[0:8]
 # os.environ["LANGCHAIN_API_KEY"] = "ls__36c6855495a940e7b0e04101249b4745"  # Update to your API key
 
 # # Used by the agent in this tutorial
-# os.environ["OPENAI_API_KEY"] = "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"
+# os.environ["OPENAI_API_KEY"] = "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"
 
 from langsmith import Client
 
