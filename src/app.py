@@ -3,6 +3,7 @@ from src.routes import routes
 
 
 app = Flask(__name__)
+app.config.from_object('config')
 
 def create_app():
     setup_app(app)
