@@ -1,0 +1,3 @@
+venv/
+run.py
+staging-db.db
