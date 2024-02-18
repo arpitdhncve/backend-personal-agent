@@ -6,9 +6,6 @@ from werkzeug.utils import secure_filename
 import os
 import boto3
 
-# os.environ["AWS_SECRET_ACCESS_KEY"] = "24/MRj8Fxtsn3mYcg0xkMA2OyXddDRz2isD+Ywp4"
-# os.environ["AWS_ACCESS_KEY_ID"] = "AKIAZQ3DN323XRZLSQ4N"
-
 
 routes = Blueprint('api', __name__)
 

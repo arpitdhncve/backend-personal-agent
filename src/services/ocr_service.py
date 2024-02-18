@@ -15,20 +15,10 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain.prompts.prompt import PromptTemplate
 from uuid import uuid4
 
+#write env variables here
 
-# os.environ["AWS_SECRET_ACCESS_KEY"] = "24/MRj8Fxtsn3mYcg0xkMA2OyXddDRz2isD+Ywp4"
-# os.environ["AWS_ACCESS_KEY_ID"] = "AKIAZQ3DN323XRZLSQ4N"
-
-unique_id = uuid4().hex[0:8]
-
-# os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# os.environ["LANGCHAIN_PROJECT"] = "pt-authorized-prefix-30"
-# os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
-# os.environ["LANGCHAIN_API_KEY"] = "ls__36c6855495a940e7b0e04101249b4745"  # Update to your API key
-
-# Used by the agent in this tutorial
-# os.environ["OPENAI_API_KEY"] = "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"
 client = Client()
+unique_id = uuid4().hex[0:8]
 
 
 
@@ -82,12 +72,11 @@ s3_client = boto3.client('s3', region_name='ap-south-1')
 
 def extract_text_from_image(image_path):
     reader = easyocr.Reader(['en'])  # Add other languages if needed
-    print(image_path)
+    print(f'image path: {image_path}')
     s3_key_name = extract_string_after_amazonaws(image_path, regex)
 
     # Set expiration time for the pre-signed URL (e.g., 300 seconds)
     expiration = 300
-    print(s3_key_name)
     presigned_url = s3_client.generate_presigned_url(
         ClientMethod='get_object',
         Params={'Bucket': bucket_name, 'Key': s3_key_name},
