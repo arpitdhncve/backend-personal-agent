@@ -6,7 +6,7 @@ import os
 # os.environ["LANGCHAIN_PROJECT"] = "pt-authorized-prefix-30"
 # os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 # os.environ["LANGCHAIN_API_KEY"] = "ls__36c6855495a940e7b0e04101249b4745"
-# os.environ["OPENAI_API_KEY"] = "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"
+# os.environ["OPENAI_API_KEY"] = "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"
 
 
 client = Client()

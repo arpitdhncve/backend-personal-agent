@@ -55,8 +55,10 @@ def extract_text():
             s3_client.upload_fileobj(file, 'persona-agent-storage', s3_key_name)
             # Assuming extract_text_from_image can now take the S3 object URL or you adjust its logic
             file_url = f"https://personal-agent.s3.ap-south-1.amazonaws.com/{s3_key_name}"
+            print(f's3 file url : {file_url}')
             # Adjust extract_text_from_image to work with file_url or directly download the file to process
             extracted_text = extract_text_from_image(file_url)  # Placeholder for OCR result
+            print(f'extracted_Text from image: {extracted_text}')
             return jsonify({'extracted_text': extracted_text}), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500

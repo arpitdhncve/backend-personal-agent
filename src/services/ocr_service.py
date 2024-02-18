@@ -27,8 +27,7 @@ unique_id = uuid4().hex[0:8]
 # os.environ["LANGCHAIN_API_KEY"] = "ls__36c6855495a940e7b0e04101249b4745"  # Update to your API key
 
 # Used by the agent in this tutorial
-# os.environ["OPENAI_API_KEY"] = "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"
-
+# os.environ["OPENAI_API_KEY"] = "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"
 client = Client()
 
 
@@ -39,9 +38,9 @@ llm = ChatOpenAI(temperature = 0.0)
 
 #what user wants chain
 
-caption_text_from_image_system_prompt = """ You have given some important piece of information in array of jumbeled words. \
-This information is important for user to save\
-You have to recreate information and why user wants to save it. Keep your answer shorts.
+caption_text_from_image_system_prompt = """  You have given some important piece of information in array of\
+jumbeled words. This information is important for user to save. \
+You have to recreate information using the input and save it.
 """
 
 prompt_to_get_what_user_wants = ChatPromptTemplate.from_messages(
@@ -105,6 +104,6 @@ def extract_text_from_image(image_path):
             # Append the text to the list
             high_confidence_text.append(text)
     
-    print(high_confidence_text)
+    print(f'high_confidence_text {high_confidence_text}')
     what_user_wants = what_user_wants_chain.invoke({"input": high_confidence_text})
     return what_user_wants
