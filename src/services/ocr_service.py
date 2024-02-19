@@ -15,7 +15,8 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain.prompts.prompt import PromptTemplate
 from uuid import uuid4
 
-#write env variables here
+
+
 
 client = Client()
 unique_id = uuid4().hex[0:8]

@@ -1,68 +1,63 @@
-from src import app
-from flask import Flask, request, Response, jsonify, Blueprint, current_app
 from src.services.expenditure_service import run_agent
-from src.services.ocr_service import extract_text_from_image  # Ensure you create this service
-from werkzeug.utils import secure_filename
-import os
+from src.services.ocr_service import extract_text_from_image
+from pydantic import BaseModel
 import boto3
+import shutil
+import os
+import json
+from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi.responses import StreamingResponse
+from typing import AsyncGenerator
+import json
 
 
-routes = Blueprint('api', __name__)
+router = APIRouter()
 
-@routes.route('/', methods = ['GET'])
-def hello_world():
-    return jsonify(message="Hello, World")
-
-
-@routes.route('/chat_now', methods=['POST'])
-def update_expenditure():
-    data = request.json
-    user_message = data.get('user_message')
-    id = data.get('id')
-
-    if user_message is None or id is None:
-        return jsonify({'error': 'user_message and id are required'}), 400
-
-    # Call extract_expenditure function
-    result = run_agent(user_message, id)
-    print(result)
-    return jsonify({'result': result["output"]}), 200
+class UserMessage(BaseModel):
+    user_message: str
+    id: str
 
 
 
-@routes.route('/extract_text', methods=['POST'])
-def extract_text():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file:
-        # Secure the filename
-        filename = secure_filename(file.filename)
+@router.get('/')
+async def hello_world():
+    return {"message": "Hello, World"}
+
+
+
+@router.post("/chat_now")
+async def chat_now(data: UserMessage):
+    if not data.user_message or not data.id:
+        raise HTTPException(status_code=400, detail="user_message and id are required")
+
+
+    async def stream_agent_responses():
+        async for chunk in run_agent(data.user_message, data.id):  # No need to await here
+            str_chunk = str(chunk)
+            encoded_chunk = str_chunk.encode('utf-8') + b'\n'
+            yield encoded_chunk
+
+    return StreamingResponse(stream_agent_responses(), media_type="application/json")
+
+
+
+
+@router.post('/extract_text')
+async def extract_text(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail='No selected file')
+    
+    s3_client = boto3.client('s3', region_name='ap-south-1')
+    s3_key_name = f"uploads/{file.filename}"
+
+    try:
+        # Save file to disk before uploading to S3
+        with open(file.filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
         
-        # Configure boto3 client
-        s3_client = boto3.client('s3', region_name='ap-south-1')
-        
-        # Generate an S3 key name for the uploaded file
-        s3_key_name = f"uploads/{filename}"
-        
-        # Upload the file to S3
-        try:
-            s3_client.upload_fileobj(file, 'persona-agent-storage', s3_key_name)
-            # Assuming extract_text_from_image can now take the S3 object URL or you adjust its logic
-            file_url = f"https://personal-agent.s3.ap-south-1.amazonaws.com/{s3_key_name}"
-            print(f's3 file url : {file_url}')
-            # Adjust extract_text_from_image to work with file_url or directly download the file to process
-            extracted_text = extract_text_from_image(file_url)  # Placeholder for OCR result
-            print(f'extracted_Text from image: {extracted_text}')
-            return jsonify({'extracted_text': extracted_text}), 200
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-
-
-
-
-
-
-
+        s3_client.upload_file(file.filename, 'persona-agent-storage', s3_key_name)
+        file_url = f"https://personal-agent.s3.ap-south-1.amazonaws.com/{s3_key_name}"
+        extracted_text = extract_text_from_image(file_url)
+        return {"extracted_text": extracted_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

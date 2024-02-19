@@ -1,14 +1,9 @@
-from flask import Flask, request
-from src.routes import routes
+from fastapi import FastAPI
+from src.routes import router as api_router
 
-
-app = Flask(__name__)
-# app.config.from_object('config')
-
-def create_app():
-    setup_app(app)
+def create_app() -> FastAPI:
+    app = FastAPI()
+    app.include_router(api_router, prefix='/api')
+    # Any additional configuration or setup can be added here
     return app
-
-def setup_app(app):
-    app.register_blueprint(routes, url_prefix='/api')
 

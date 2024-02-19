@@ -1,8 +1,11 @@
-from langsmith import Client
 import os
+from uuid import uuid4
+
+unique_id = uuid4().hex[0:8]
 
 
 
+from langsmith import Client
 
 client = Client()
 
@@ -16,7 +19,7 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.output_parsers import JsonOutputParser
 from langchain.prompts.prompt import PromptTemplate
 from langchain.agents import Tool
-from langchain.tools import BaseTool
+from langchain.tools import BaseTool, tool
 from typing import Union, Optional
 import itertools
 import time
@@ -25,6 +28,8 @@ from langchain_core.messages import AIMessage, HumanMessage
 import re
 from datetime import date
 import uuid
+from datetime import date
+
 
 
 llm = ChatOpenAI(temperature = 0.0)
@@ -55,7 +60,8 @@ texts = [
 res = embed.embed_documents(texts)
 len(res), len(res[0])
 
-
+# Using SQL Database for agent utility sql database for agent utility
+import sqlite3
 from langchain_community.utilities import SQLDatabase
 
 sql_database = SQLDatabase.from_uri("sqlite:///staging-db.db")
@@ -66,6 +72,7 @@ print(response)
 
 
 
+#creating few shots prompt for the chain
 
 expenditure_examples = [
     {"today_date": "1998/10/23", "input": "26", "output": """{"Amount Spend": 26, "Purpose": "", paid_to : "", date_of_expenditure:"1998/10/23" }"""},
@@ -78,6 +85,9 @@ expenditure_examples = [
     {"today_date": "1998/10/23", "input": "470 oct 13", "output": """{"Amont Spend": "470", "Purpose": "", paid_to:"", date_of_expenditure:"1998/10/13"}"""},
     {"today_date": "1998/10/23", "input": "lunch on 20th oct", "output": """{"Amont Spend": "", "Purpose": "lunch", paid_to:"", date_of_expenditure:"1998/10/20"}"""},
     {"today_date": "1998/10/23", "input": "pizza 320 yesterday", "output": """{"Amont Spend": "320", "Purpose": "pizza", paid_to:"", date_of_expenditure:"1998/10/22"}"""}
+
+    
+
 
 ]
 
@@ -197,6 +207,7 @@ what_user_wants_chain.invoke({"input": "70 pav bhaji"})
 from langchain_community.agent_toolkits import create_sql_agent
 sql_agent_executor = create_sql_agent(llm, db=sql_database, agent_type="openai-tools", verbose=True)
 
+
 def extract_details_from_agent_input(agent_input:str):
   """
   Extracts the user message and id from a given text string.
@@ -218,100 +229,115 @@ def extract_details_from_agent_input(agent_input:str):
   return {"user_message": user_message, "id": id_value, "today_date": today_date}
 
 
-class saveExpenditureInfo(BaseTool):
-    name = "saveExpenditureInfo"
-    description = "Use this to save expenditure , One input is required [agent_input]"
 
-    def _run(self, agent_input:str):
-        # agent_input format : "um = {input} and id = {id}"
-        agent_input = extract_details_from_agent_input(agent_input)
-        print(agent_input['id'])
-        response = expenditure_details_chain.invoke({"input":agent_input['user_message'], "today_date": agent_input['today_date']})
-        response['category'] = expenditure_category_chain.invoke({"input":response['purpose']})
-        #check if date_of_expenditure is of future date        
-        if response["amount_paid"] == "" or response["purpose"] == "":
-            return "Wrong message or incomplete details, we can only help you with your expenditure tracking" 
-        else:
-            #save in vector database
-            response_string = str(response)
-            embed_response = embed.embed_documents([response_string])
-            embed_user_message = embed.embed_documents([agent_input['user_message']])
-            vector_id_user_message = str(uuid.uuid4())
-            vector_id_response = str(uuid.uuid4())
-            current_timestamp = int(time.time())
-            index.upsert(
-                vectors = [
-                    {
-                        "id": vector_id_user_message,
-                        "values": embed_user_message[0],
-                        "metadata": {'text': agent_input['user_message'], 'messageType': "HumanMessage", "time": current_timestamp}
-                    },
-                    {
-                        "id": vector_id_response,
-                        "values": embed_response[0],
-                        "metadata": {'text': response_string ,  'messageType': "AIMessage", "time": current_timestamp}
-                    }
-                    
-                ],
-                namespace=agent_input['id']
-           )
-            #saving in sql db
-            today = date.today()
-            print(today)
-            sql_database.run(
-                       f"""INSERT INTO expenditure_details (user_id, amount_paid, purpose, paid_to, category, date_of_expenditure, created_at)\
-                         VALUES ({agent_input['id']}, {response["amount_paid"]}, '{response["purpose"]}',\
-                         '{response["paid_to"]}','{response["category"]}','{response["date_of_expenditure"]}','{today}');"""
-                     )
-            
-        return response
-
-    def _arun(self,query:str):
-        raise NotImplementedError("This tool does not support async")
+import random
 
 
-class getExpenditureInsights(BaseTool):
-    name = "getExpenditureInsights"
-    description = "Use this to get insights on expenditure, one input is required [agent_input]"
+@tool
+async def saveExpenditure(agent_input: str) -> str:
+    "Use this to save expenditure , One input is required [agent_input]"
+    # agent_input format : "um = {input} and id = {id}"
+    agent_input = extract_details_from_agent_input(agent_input)
+    print(agent_input['id'])
+    response = expenditure_details_chain.invoke({"input":agent_input['user_message'], "today_date": agent_input['today_date']})
+    response['category'] = expenditure_category_chain.invoke({"input":response['purpose']})
+    #check if date_of_expenditure is of future date        
+    if response["amount_paid"] == "" or response["purpose"] == "":
+        return "Wrong message or incomplete details, we can only help you with your expenditure tracking" 
+    else:
+        #save in vector database
+        response_string = str(response)
+        embed_response = embed.embed_documents([response_string])
+        embed_user_message = embed.embed_documents([agent_input['user_message']])
+        vector_id_user_message = str(uuid.uuid4())
+        vector_id_response = str(uuid.uuid4())
+        current_timestamp = int(time.time())
+        index.upsert(
+            vectors = [
+                {
+                    "id": vector_id_user_message,
+                    "values": embed_user_message[0],
+                    "metadata": {'text': agent_input['user_message'], 'messageType': "HumanMessage", "time": current_timestamp}
+                },
+                {
+                    "id": vector_id_response,
+                    "values": embed_response[0],
+                    "metadata": {'text': response_string ,  'messageType': "AIMessage", "time": current_timestamp}
+                }
 
-    def _run(self, agent_input: str):
-        agent_input = extract_details_from_agent_input(agent_input)
-        print(agent_input)
-        sql_agent_input = f"my query is `{agent_input['user_message']}` and my id is `{agent_input['id']}`, give me answer not sql query"
-        sql_agent_response = sql_agent_executor.invoke({"input": sql_agent_input})
-        return sql_agent_response
-        
-    def _arun(self, query: str):
-        raise NotImplementedError("This tool does not support async")
+            ],
+            namespace=agent_input['id']
+       )
+        #saving in sql db
+        today = date.today()
+        print(today)
+        sql_database.run(
+                   f"""INSERT INTO expenditure_details (user_id, amount_paid, purpose, paid_to, category, date_of_expenditure, created_at)\
+                     VALUES ({agent_input['id']}, {response["amount_paid"]}, '{response["purpose"]}',\
+                     '{response["paid_to"]}','{response["category"]}','{response["date_of_expenditure"]}','{today}');"""
+                 )
+
+    return response
 
 
-class whatUserWants(BaseTool):
-    name = "whatUserWants"
-    description = "Use this tool to find out the purpose of why human have messaged you [agent_input]"
-
-    def _run(self, agent_input: str):
-        agent_input_extracted = extract_details_from_agent_input(agent_input)
-        response = what_user_wants_chain.invoke({"input" : agent_input_extracted['user_message']})
-        return f'Use {response} with input "{agent_input}"'
-        
-    def _arun(self, query: str):
-        raise NotImplementedError("This tool does not support async")
+@tool
+async def getExpenditureInsights(agent_input: str) -> str:
+    "Use this to get insights on expenditure, one input is required [agent_input]"
+    agent_input = extract_details_from_agent_input(agent_input)
+    print(agent_input)
+    sql_agent_input = f"my query is `{agent_input['user_message']}` and my id is `{agent_input['id']}`, give me answer not sql query"
+    sql_agent_response = sql_agent_executor.invoke({"input": sql_agent_input})
+    return sql_agent_response
 
 
-tools = [whatUserWants(), saveExpenditureInfo(), getExpenditureInsights()]
+@tool
+async def whatUserWants(agent_input: str) -> str:
+    "Use this tool to find out the purpose of why human have messaged you [agent_input]"
+    agent_input_extracted = extract_details_from_agent_input(agent_input) #to get agent_input_extracted['user_message'] for below use
+    response = what_user_wants_chain.invoke({"input" : agent_input_extracted['user_message']})
+    return f'Use {response} with input "{agent_input}"'
 
 
+tools = [whatUserWants,saveExpenditure,getExpenditureInsights]
 
+# Get the prompt to use - you can modify this!
 prompt = hub.pull("hwchase17/openai-tools-agent")
 prompt.messages[0].prompt.template = "You are a helpful assistant, pass human input as\
 it is to whatUserWants tool and take action accordingly."
-agent = create_openai_tools_agent(llm, prompt = prompt, tools = tools)
-agent_executor = AgentExecutor(agent = agent,tools = tools, verbose = True)
+# print(prompt.messages) -- to see the prompt
+agent = create_openai_tools_agent(
+    llm.with_config({"tags": ["agent_llm"]}), tools, prompt
+)
+agent_executor = AgentExecutor(agent=agent, tools=tools).with_config(
+    {"run_name": "Agent"}
+)
 
-def run_agent(user_message:str, id:str):
+
+
+
+from datetime import date
+
+async def run_agent(user_message: str, id: str):
     today = date.today()
     agent_input = f'qwerty = {{{user_message}}} and id = {{{id}}} and date = {{{today}}}'
-    print(agent_input)
-    res = agent_executor.invoke({"input": agent_input})
-    return res
+
+    async for chunk in agent_executor.astream({"input": agent_input}):
+        if "actions" in chunk:
+            for action in chunk["actions"]:
+                if action.tool == "whatUserWants":
+                    yield "Figuring out the purpose of your message\n"
+                elif action.tool == "saveExpenditure":
+                    yield "You want to update your expenditure details\n"
+                else:
+                    yield "You are looking for insights on your expenditure\n"
+                
+        if "output" in chunk:
+            yield f'Final Output: {chunk["output"]}\n'
+
+
+
+
+
+
+# run_agent("60 nariyal pani", "24")
 
