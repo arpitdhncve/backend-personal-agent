@@ -1,13 +1,14 @@
 import os
 from uuid import uuid4
+import ast
+
 
 unique_id = uuid4().hex[0:8]
 
 
 
 from langsmith import Client
-
-client = Client()
+from datetime import datetime
 
 from langchain import hub
 from langchain_openai import ChatOpenAI
@@ -31,6 +32,7 @@ import uuid
 from datetime import date
 
 
+client = Client()
 
 llm = ChatOpenAI(temperature = 0.0)
 
@@ -338,6 +340,47 @@ async def run_agent(user_message: str, id: str):
 
 
 
+async def expenditure_data(id: str):
+    """
+    Extracts all records matching the given ID from the 'expenditure_data' table in the `staging-db.db` SQLite database.
+    """
 
-# run_agent("60 nariyal pani", "24")
+    if not id:
+        raise ValueError("ID parameter cannot be missing or empty.")
+
+    try:
+        # Assuming sql_database has an async method to get a connection
+        query = f"SELECT * FROM expenditure_details WHERE user_id = {id}"
+        print(query)
+        # Ensure parameters are passed as a tuple to prevent SQL injection
+        rows = sql_database.run(query)
+
+        # Assuming 'response' is the string you received
+        response = rows
+
+        # Safely convert the string representation of the list to an actual list of tuples
+        records_tuples = ast.literal_eval(response)
+
+        # Define the column names based on your schema
+        column_names = ["user_id", "amount_paid", "purpose", "paid_to", "category", "date_of_expenditure", "created_at", "created_at_timestamp"]
+
+        # Convert each tuple to a dictionary using column names as keys
+        records_dicts = [dict(zip(column_names, record)) for record in records_tuples]
+
+        sorted_records = sorted(records_dicts, key=lambda x: x["created_at_timestamp"], reverse=True)
+
+        # Calculate total amount spent today
+        today = datetime.now().date()
+        total_spent_today = sum(record["amount_paid"] for record in sorted_records if datetime.strptime(record["created_at"], "%Y-%m-%d").date() == today)
+        # Prepare the final response
+        response = {
+            "records": sorted_records,
+            "total_spent_today": total_spent_today
+        }
+
+        return response
+
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving expenditure data: {e}") from e
+
 

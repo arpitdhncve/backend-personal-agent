@@ -16,12 +16,8 @@ from langchain.prompts.prompt import PromptTemplate
 from uuid import uuid4
 
 
-
-
 client = Client()
 unique_id = uuid4().hex[0:8]
-
-
 
 
 llm = ChatOpenAI(temperature = 0.0)

@@ -1,4 +1,4 @@
-from src.services.expenditure_service import run_agent
+from src.services.expenditure_service import run_agent, expenditure_data
 from src.services.ocr_service import extract_text_from_image
 from pydantic import BaseModel
 import boto3
@@ -15,6 +15,9 @@ router = APIRouter()
 
 class UserMessage(BaseModel):
     user_message: str
+    id: str
+
+class UserId(BaseModel):
     id: str
 
 
@@ -61,3 +64,23 @@ async def extract_text(file: UploadFile = File(...)):
         return {"extracted_text": extracted_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+@router.get("/expenditure_data")
+async def get_expenditure(data: UserId):
+    id = data.id
+    print(id)
+    try:
+        # Ensure the ID is properly formatted or converted as needed before passing to the function
+        response = await expenditure_data(id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Expenditure data not found")
+        return {"response": response}
+    except ValueError as ve:
+        # Handle missing or empty ID
+        raise HTTPException(status_code=400, detail=str(ve))
+    except RuntimeError as re:
+        # Handle errors from the expenditure_data function
+        raise HTTPException(status_code=500, detail=str(re))
