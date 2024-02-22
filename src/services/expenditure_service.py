@@ -32,6 +32,7 @@ import uuid
 from datetime import date
 
 
+
 client = Client()
 
 llm = ChatOpenAI(temperature = 0.0)
