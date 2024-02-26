@@ -306,7 +306,7 @@ tools = [whatUserWants,saveExpenditure,getExpenditureInsights]
 # Get the prompt to use - you can modify this!
 prompt = hub.pull("hwchase17/openai-tools-agent")
 prompt.messages[0].prompt.template = "You are a helpful assistant, pass human input as\
-it is to whatUserWants tool and take action accordingly."
+it is to whatUserWants tool and take action accordingly. Use Indian Rupees are currency if needed"
 # print(prompt.messages) -- to see the prompt
 agent = create_openai_tools_agent(
     llm.with_config({"tags": ["agent_llm"]}), tools, prompt

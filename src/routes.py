@@ -14,11 +14,12 @@ import httpx
 import jwt
 import base64
 import requests
-from typing import Optional
-
-
-
-
+from typing import Optional, List
+from sqlalchemy import create_engine, Column, Integer, String, MetaData
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timedelta
+import uuid
 
 customerId = "C-E98F177B0E2E40E"   #id for message central
 
@@ -28,12 +29,15 @@ class UserMessage(BaseModel):
     user_message: str
     id: str
 
+
 class UserId(BaseModel):
     id: str
+
 
 class SignUpRequest(BaseModel):
     phone_number: str
     country_code: str = '91'  # Default to '91' if not specified
+
 
 class VerifyOTPRequest(BaseModel):
     phone_number: str
@@ -175,9 +179,18 @@ async def chat_now(request:Request, data: UserMessage, phone_number: str = Depen
 
     async def stream_agent_responses():
         async for chunk in run_agent(data.user_message, data.id):  # No need to await here
-            str_chunk = str(chunk)
-            encoded_chunk = str_chunk.encode('utf-8') + b'\n'
+            # Convert the chunk to a string if it is not one, and remove newline characters
+            str_chunk = str(chunk).replace('\n', ' ').replace('\r', '')
+            # Escape double quotes correctly for JSON, but avoid adding unnecessary backslashes
+            str_chunk = str_chunk.replace('"', '\\"')
+            # Wrap the modified string in a dictionary
+            chunk_dict = {"message": str_chunk}
+            # Convert the dictionary to a JSON string
+            json_chunk = json.dumps(chunk_dict)
+            # Encode the JSON string
+            encoded_chunk = json_chunk.encode('utf-8') + b'\n'  # Keeping the newline here for separate JSON objects in the stream
             yield encoded_chunk
+        
 
     return StreamingResponse(stream_agent_responses(), media_type="application/json")
 
@@ -222,6 +235,7 @@ async def get_expenditure(data: UserId, phone_number: str = Depends(get_current_
     except RuntimeError as re:
         # Handle errors from the expenditure_data function
         raise HTTPException(status_code=500, detail=str(re))
+
 
 
 
